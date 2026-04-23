@@ -1,42 +1,52 @@
 pipeline {
-    agent any 
-    
-    stages{
-        stage("Clone Code"){
+    agent any
+
+    environment {
+        IMAGE_NAME = 'my-note-app'
+        IMAGE_TAG  = 'microdegree'
+    }
+
+    stages {
+
+        stage('Code Cloning') {
             steps {
-                echo "Cloning the code"
-                git url:"https://github.com/LondheShubham153/django-notes-app.git", branch: "main"
+                echo 'Cloning the code'
+                git branch: 'main',
+                    url: 'https://github.com/bhairavaa/django-notes-app.git'
             }
         }
-        stage("Build"){
+
+        stage('Build Docker Image') {
             steps {
-                echo "Building the image"
-                sh "docker build -t my-note-app ."
+                echo 'Building Docker image'
+                sh 'docker build -t $IMAGE_NAME .'
             }
         }
-        stage("Push to Docker Hub"){
+
+        stage('Push Image to DockerHub') {
             steps {
-                echo "Pushing the image to docker hub"
-                withCredentials([usernamePassword(credentialsId:"dockerHub",passwordVariable:"dockerHubPass",usernameVariable:"dockerHubUser")]){
-                sh "docker tag my-note-app ${env.dockerHubUser}/my-note-app:latest"
-                sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPass}"
-                sh "docker push ${env.dockerHubUser}/my-note-app:latest"
+                echo 'Pushing image to DockerHub'
+
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerHub',
+                    usernameVariable: 'dockerHubUser',
+                    passwordVariable: 'dockerHubPass'
+                )]) {
+
+                    sh 'docker login -u $dockerHubUser -p $dockerHubPass'
+                    sh 'docker tag $IMAGE_NAME $dockerHubUser/$IMAGE_NAME:$IMAGE_TAG'
+                    sh 'docker push $dockerHubUser/$IMAGE_NAME:$IMAGE_TAG'
                 }
             }
         }
-        stage("Deploy to kubernetes") {
-            steps {
-                script {
-                    dir("notesapp") {
-                        withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'kubernetes', namespace: '', restrictKubeConfigAccess: false, serverUrl: '') {
-                        sh "kubectl delete --all pods"
-                        sh "kubectl apply -f deployment.yaml"
-                        sh "kubectl apply -f service.yaml"
-                        }
-                    }
-                }
-                
-            }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully 🎉'
+        }
+        failure {
+            echo 'Pipeline failed ❌'
         }
     }
 }
