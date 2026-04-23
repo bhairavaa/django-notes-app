@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notesapp-green
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notesapp
+      version: green
+  template:
+    metadata:
+      labels:
+        app: notesapp
+        version: green
+    spec:
+      containers:
+      - name: notesapp
+        image: rashmidevops1/my-note-app:green
+        ports:
+        - containerPort: 8000
